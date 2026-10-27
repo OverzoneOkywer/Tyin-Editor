@@ -18,7 +18,7 @@ GitHub Actions membangun keduanya secara otomatis pada pull request, push ke
 `main`/`master`, dan tag versi `v*`. Pada tag versi, paket siap unduh
 dipublikasikan ke halaman **GitHub Releases**. Build dari branch tersedia sebagai
 artifact sementara di halaman run workflow. Installer terbaru tersedia di
-[GitHub Release v0.1.1](https://github.com/OverzoneOkywer/Tyin-Editor/releases/tag/v0.1.1);
+[GitHub Release v0.1.2](https://github.com/OverzoneOkywer/Tyin-Editor/releases/tag/v0.1.2);
 rilis portable sebelumnya tetap tersedia di halaman Releases.
 
 ### Instalasi dari GitHub Releases
@@ -32,7 +32,7 @@ rilis portable sebelumnya tetap tersedia di halaman Releases.
    ganda atau perintah:
 
    ```bash
-   sudo apt install ./tyin-editor_0.1.1_amd64.deb
+   sudo apt install ./tyin-editor_0.1.2_amd64.deb
    ```
 
    Aplikasi muncul di menu aplikasi desktop. Hapus melalui **App Center** atau
@@ -115,8 +115,9 @@ yang sudah tersedia:
   diatur, terminal workspace, serta ikon konsisten tanpa emoji.
 
 Tyin-Editor masih dalam pengembangan: editing file sangat besar belum
-divirtualisasi, dan terminal belum mendukung aplikasi TUI yang membutuhkan
-emulasi layar penuh. Klaim performa belum berdasarkan benchmark lintas mesin.
+divirtualisasi, dan terminal belum mendukung input tombol langsung yang
+dibutuhkan aplikasi TUI interaktif. Klaim performa belum berdasarkan benchmark
+lintas mesin.
 
 ## Fitur yang sudah bisa dicoba
 
@@ -129,8 +130,9 @@ emulasi layar penuh. Klaim performa belum berdasarkan benchmark lintas mesin.
 - Panel Git untuk meninjau diff, stage/unstage file, dan commit perubahan staged
   (`GIT` di activity bar).
 - Terminal shell interaktif berbasis PTY di tab `TERMINAL` pada panel bawah.
-- Output terminal mendukung warna ANSI dasar dan tombol interrupt `Ctrl+C`;
-  aplikasi TUI yang membutuhkan emulasi cursor/layar penuh belum didukung.
+- Layar terminal memproses kontrol ANSI untuk cursor, clear-screen, serta warna
+  16/256 dan RGB. Perintah shell dikirim lewat field input; aplikasi TUI yang
+  membutuhkan input tombol langsung belum didukung.
 - Diagnostics dan completion LSP jika server bahasa sudah dipasang dan
   dikonfigurasi; `Ctrl+Space` meminta completion dan `F12` menuju definisi.
 - Ikon vektor pada activity bar serta ikon aplikasi Tyin.

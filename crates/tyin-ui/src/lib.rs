@@ -53,6 +53,26 @@ fn editor_line_count(text: &str) -> usize {
     text.split('\n').count()
 }
 
+fn gutter_line_numbers(
+    row_ends_with_newline: impl IntoIterator<Item = bool>,
+) -> Vec<Option<usize>> {
+    let mut line_number = 1;
+    let mut starts_line = true;
+    row_ends_with_newline
+        .into_iter()
+        .map(|ends_with_newline| {
+            let number = starts_line.then_some(line_number);
+            if ends_with_newline {
+                line_number += 1;
+                starts_line = true;
+            } else {
+                starts_line = false;
+            }
+            number
+        })
+        .collect()
+}
+
 use panel::PanelTab;
 
 fn apply_theme(ctx: &egui::Context, theme: &str) {
@@ -910,10 +930,14 @@ impl eframe::App for TyinApp {
                             .as_ref()
                             .map(|p| p.display().to_string())
                             .unwrap_or_else(|| "untitled".to_string());
-                        let current_text = self.tabs[idx].edit_text.clone();
-                        let spans = self.tabs[idx].highlight_spans.clone();
-                        let syntax_status = self.tabs[idx].syntax_info.clone();
-                        let line_count = editor_line_count(&current_text);
+                        let (line_count, spans, syntax_status) = {
+                            let tab = &self.tabs[idx];
+                            (
+                                editor_line_count(&tab.edit_text),
+                                tab.highlight_spans.clone(),
+                                tab.syntax_info.clone(),
+                            )
+                        };
                         let editor_rows = line_count.saturating_add(EDITOR_EXTRA_SCROLL_LINES);
                         ui.horizontal(|ui| {
                             ui.strong(&path_str);
@@ -956,27 +980,6 @@ impl eframe::App for TyinApp {
                                         egui::Sense::hover(),
                                     );
                                     let clip = ui.clip_rect();
-                                    let first_line = ((clip.top() - gutter.top()) / line_height)
-                                        .floor()
-                                        .max(0.0)
-                                        as usize;
-                                    let last_line = (((clip.bottom() - gutter.top()) / line_height)
-                                        .ceil()
-                                        .max(0.0)
-                                        as usize)
-                                        .min(line_count);
-                                    for line in first_line..last_line {
-                                        ui.painter().text(
-                                            egui::pos2(
-                                                gutter.right() - 4.0,
-                                                gutter.top() + line as f32 * line_height,
-                                            ),
-                                            egui::Align2::RIGHT_TOP,
-                                            format!("{:>4}", line + 1),
-                                            egui::FontId::monospace(14.0),
-                                            ui.visuals().weak_text_color(),
-                                        );
-                                    }
                                     ui.separator();
                                     if let Some(tab) = self.tabs.get_mut(idx) {
                                         let tab_pressed = self.editor_id.is_some_and(|id| {
@@ -1028,6 +1031,33 @@ impl eframe::App for TyinApp {
                                             .desired_width(editor_width)
                                             .layouter(&mut layouter)
                                             .show(ui);
+                                        let row_numbers = gutter_line_numbers(
+                                            output
+                                                .galley
+                                                .rows
+                                                .iter()
+                                                .map(|row| row.ends_with_newline),
+                                        );
+                                        for (row, number) in
+                                            output.galley.rows.iter().zip(row_numbers)
+                                        {
+                                            let Some(number) = number else {
+                                                continue;
+                                            };
+                                            let y = output.galley_pos.y + row.rect.min.y;
+                                            if y + row.rect.height() < clip.top()
+                                                || y > clip.bottom()
+                                            {
+                                                continue;
+                                            }
+                                            ui.painter().text(
+                                                egui::pos2(gutter.right() - 4.0, y),
+                                                egui::Align2::RIGHT_TOP,
+                                                format!("{number:>4}"),
+                                                egui::FontId::monospace(14.0),
+                                                ui.visuals().weak_text_color(),
+                                            );
+                                        }
                                         let response = output.response;
                                         self.editor_id = Some(response.id);
                                         let cursor = output
@@ -1385,23 +1415,38 @@ impl eframe::App for TyinApp {
                                     self.error_message =
                                         Some(format!("Gagal mengubah ukuran terminal: {error}"));
                                 }
-                                let output = terminal.colored_output();
+                                let output = match terminal.colored_output() {
+                                    Ok(output) => output,
+                                    Err(error) => {
+                                        self.error_message =
+                                            Some(format!("Gagal membaca layar terminal: {error}"));
+                                        Vec::new()
+                                    }
+                                };
                                 egui::ScrollArea::vertical()
                                     .stick_to_bottom(true)
                                     .max_height((available.y - 36.0).max(80.0))
                                     .show(ui, |ui| {
-                                        for line in output.iter().rev().take(200).rev() {
+                                        for line in &output {
                                             ui.horizontal(|ui| {
                                                 for segment in line {
+                                                    let mut text =
+                                                        egui::RichText::new(&segment.text)
+                                                            .monospace();
                                                     if let Some([r, g, b]) = segment.color {
-                                                        ui.colored_label(
-                                                            egui::Color32::from_rgb(r, g, b),
-                                                            egui::RichText::new(&segment.text)
-                                                                .monospace(),
-                                                        );
-                                                    } else {
-                                                        ui.monospace(&segment.text);
+                                                        text = text.color(egui::Color32::from_rgb(
+                                                            r, g, b,
+                                                        ));
                                                     }
+                                                    if let Some([r, g, b]) = segment.background {
+                                                        text = text.background_color(
+                                                            egui::Color32::from_rgb(r, g, b),
+                                                        );
+                                                    }
+                                                    if segment.bold {
+                                                        text = text.strong();
+                                                    }
+                                                    ui.label(text);
                                                 }
                                             });
                                         }
@@ -1690,7 +1735,10 @@ impl eframe::App for TyinApp {
 
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
-                ui.label("Tyin-Editor v0.1.0 • native Rust • egui/wgpu");
+                ui.label(format!(
+                    "Tyin-Editor v{} • native Rust • egui/wgpu",
+                    env!("CARGO_PKG_VERSION")
+                ));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if let Some(idx) = self.active_tab {
                         if idx < self.tabs.len() && self.tabs[idx].buffer.dirty {
@@ -1719,8 +1767,8 @@ impl eframe::App for TyinApp {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_theme, editor_line_count, lsp_position, replace_char_range, replace_word,
-        text_offset_from_lsp,
+        apply_theme, editor_line_count, gutter_line_numbers, lsp_position, replace_char_range,
+        replace_word, text_offset_from_lsp,
     };
 
     #[test]
@@ -1742,6 +1790,14 @@ mod tests {
         assert_eq!(editor_line_count(""), 1);
         assert_eq!(editor_line_count("one\ntwo"), 2);
         assert_eq!(editor_line_count("one\n"), 2);
+    }
+
+    #[test]
+    fn gutter_numbers_logical_lines_across_wrapped_visual_rows() {
+        assert_eq!(
+            gutter_line_numbers([false, false, true, false, true, false]),
+            [Some(1), None, None, Some(2), None, Some(3)]
+        );
     }
 
     #[test]

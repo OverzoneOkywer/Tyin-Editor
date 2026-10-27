@@ -85,12 +85,14 @@ dari UI dengan hasil yang dapat dipahami.
 - [x] Hentikan proses terminal saat aplikasi keluar atau workspace berganti
 - [x] Batasi buffer output dan proses repaint agar penggunaan resource terkendali
 - [x] Tampilkan error saat shell gagal dimulai atau proses berakhir
+- [x] Render layar terminal dengan kontrol cursor dan warna ANSI 16/256/RGB
 
 **Selesai jika:** shell interaktif dapat digunakan dalam workspace tanpa membuat
 UI macet atau membiarkan proses yatim.
 
-Catatan: terminal merender warna ANSI dasar dan dapat mengirim Ctrl+C, tetapi
-belum mengemulasi kontrol cursor/layar penuh untuk aplikasi TUI.
+Catatan: output shell dirender melalui emulator ANSI dengan scrollback terbatas.
+Input masih berbasis perintah, sehingga aplikasi TUI yang memerlukan input tombol
+langsung belum didukung.
 
 ## Tahap 7 — LSP dan resource management
 

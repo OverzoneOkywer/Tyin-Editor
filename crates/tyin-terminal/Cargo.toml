@@ -8,3 +8,4 @@ license.workspace = true
 [dependencies]
 anyhow.workspace = true
 portable-pty = "0.9"
+vt100 = "0.18"
