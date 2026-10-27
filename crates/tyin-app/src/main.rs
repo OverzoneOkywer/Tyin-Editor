@@ -1,6 +1,13 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use eframe::egui;
 use tyin_core::Config;
 use tyin_ui::TyinApp;
+
+fn log_filter() -> tracing_subscriber::EnvFilter {
+    tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn,tyin_app=info"))
+}
 
 fn app_icon() -> egui::IconData {
     let size = 32_u32;
@@ -47,10 +54,7 @@ fn app_icon() -> egui::IconData {
 
 fn main() -> eframe::Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("info".parse().unwrap()),
-        )
+        .with_env_filter(log_filter())
         .init();
 
     let config = match Config::load("tyin.toml") {
@@ -77,4 +81,14 @@ fn main() -> eframe::Result<()> {
         native_options,
         Box::new(move |cc| Ok(Box::new(TyinApp::new(cc, config)))),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::log_filter;
+
+    #[test]
+    fn default_log_filter_keeps_renderer_info_out_of_console() {
+        assert_eq!(log_filter().to_string(), "tyin_app=info,warn");
+    }
 }

@@ -17,26 +17,32 @@ Tyin-Editor mendukung build native **Linux x86_64** dan **Windows x86_64**.
 GitHub Actions membangun keduanya secara otomatis pada pull request, push ke
 `main`/`master`, dan tag versi `v*`. Pada tag versi, paket siap unduh
 dipublikasikan ke halaman **GitHub Releases**. Build dari branch tersedia sebagai
-artifact sementara di halaman run workflow.
+artifact sementara di halaman run workflow. Installer Windows dan Linux akan
+tersedia setelah perubahan packaging ini masuk ke branch dan versi rilis
+berikutnya dibuat; rilis portable yang sudah ada tidak berubah.
 
 ### Instalasi dari GitHub Releases
 
 1. Buka [Releases](https://github.com/OverzoneOkywer/Tyin-Editor/releases) dan
-   unduh paket sesuai sistem operasi.
-2. **Windows:** ekstrak `tyin-editor-windows-x86_64.zip`, lalu jalankan
-   `tyin-app.exe`.
-3. **Linux:** ekstrak `tyin-editor-linux-x86_64.tar.gz`, lalu jalankan:
+   unduh installer sesuai sistem operasi.
+2. **Windows:** jalankan `Tyin-Editor-Setup-<versi>-x64.exe`. Installer
+   memasang aplikasi untuk akun Windows saat ini dan menyediakan shortcut Start
+   Menu, pilihan shortcut desktop, serta uninstaller di **Installed apps**.
+3. **Ubuntu/Debian:** install file `tyin-editor_<versi>_amd64.deb` dengan klik
+   ganda atau perintah:
 
    ```bash
-   tar -xzf tyin-editor-linux-x86_64.tar.gz
-   chmod +x tyin-app
-   ./tyin-app
+   sudo apt install ./tyin-editor_0.1.1_amd64.deb
    ```
 
-Paket saat ini berisi executable portable, bukan installer dengan wizard.
-Linux mungkin memerlukan library runtime sistem untuk audio, windowing, dan
-display. Pastikan Rust language server terpasang jika ingin menggunakan fitur
-LSP.
+   Aplikasi muncul di menu aplikasi desktop. Hapus melalui **App Center** atau
+   `sudo apt remove tyin-editor`.
+
+Uninstall menghapus executable, shortcut, dan ikon aplikasi, bukan workspace
+atau file kode pengguna. Windows mempertahankan folder konfigurasi pengguna;
+paket Debian hanya menghapus file yang dimiliki paket. Lokasi dan migrasi
+konfigurasi Tyin masih perlu dirapikan terpisah sebelum fitur updater dibuat.
+Language server tetap perlu dipasang sendiri untuk menggunakan fitur LSP.
 
 ### Linux (Ubuntu/Debian)
 
@@ -78,8 +84,7 @@ cargo build --locked --release -p tyin-app --target x86_64-pc-windows-gnu
 ```
 
 Executable hasil cross-compile berada di
-`target/x86_64-pc-windows-gnu/release/tyin-app.exe`; salinan siap pakai juga
-disediakan di `dist/Tyin-Editor-Windows-x86_64.exe`.
+`target/x86_64-pc-windows-gnu/release/tyin-app.exe`.
 
 ### Development
 
@@ -87,7 +92,7 @@ disediakan di `dist/Tyin-Editor-Windows-x86_64.exe`.
 cargo run -p tyin-app
 ```
 
-Binary Linux dan Windows adalah executable native, bukan installer. Linux
+Perintah build di atas menghasilkan executable native tanpa installer. Linux
 mungkin membutuhkan library runtime sistem untuk audio, windowing, dan display.
 
 ## Kenapa Tyin-Editor?

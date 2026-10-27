@@ -62,9 +62,11 @@ impl TyinApp {
         }
 
         let (sender, receiver) = mpsc::channel();
+        let repaint_ctx = self.repaint_ctx.clone();
         thread::spawn(move || {
             let result = Project::scan(path).map_err(|error| error.to_string());
             let _ = sender.send(result);
+            repaint_ctx.request_repaint();
         });
         self.workspace_scan = Some(receiver);
         self.workspace_scan_replaces = replaces;

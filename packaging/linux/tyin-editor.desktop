@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Tyin-Editor
+Comment=Native, resource-aware code editor
+Exec=tyin-editor
+Icon=tyin-editor
+Terminal=false
+Type=Application
+Categories=Development;IDE;TextEditor;
+StartupNotify=true
+StartupWMClass=tyin-app
+Keywords=code;editor;development;git;

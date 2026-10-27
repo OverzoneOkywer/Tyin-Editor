@@ -1,0 +1,10 @@
+Package: tyin-editor
+Version: @VERSION@
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: Tyin-Editor contributors
+Depends: libc6, libasound2, libudev1, libwayland-client0, libx11-6, libxkbcommon0, libxcb1, libvulkan1
+Description: Native, resource-aware code editor
+ Tyin-Editor combines a native editor, workspace explorer, Git panel, terminal,
+ and configurable language-server support in one desktop application.

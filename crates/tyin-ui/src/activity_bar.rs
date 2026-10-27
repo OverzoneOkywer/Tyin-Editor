@@ -66,13 +66,24 @@ pub(super) fn show(
 }
 
 fn draw(ui: &mut egui::Ui, icon: Icon, tooltip: &str, active: bool) -> bool {
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(34.0, 34.0), egui::Sense::click());
-    if response.hovered() || active {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(38.0, 38.0), egui::Sense::click());
+    if active {
+        ui.painter().rect_filled(
+            rect.shrink(1.0),
+            7.0,
+            ui.visuals().selection.bg_fill.gamma_multiply(0.16),
+        );
+        ui.painter().rect_filled(
+            egui::Rect::from_min_size(rect.left_top(), egui::vec2(2.0, rect.height())),
+            1.0,
+            ui.visuals().hyperlink_color,
+        );
+    } else if response.hovered() {
         ui.painter()
-            .rect_filled(rect.shrink(1.0), 5.0, ui.visuals().widgets.hovered.bg_fill);
+            .rect_filled(rect.shrink(1.0), 7.0, ui.visuals().widgets.hovered.bg_fill);
     }
-    let color = if active {
-        ui.visuals().strong_text_color()
+    let color = if active || response.hovered() {
+        ui.visuals().hyperlink_color
     } else {
         ui.visuals().text_color()
     };

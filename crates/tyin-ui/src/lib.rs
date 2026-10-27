@@ -67,6 +67,60 @@ fn apply_theme(ctx: &egui::Context, theme: &str) {
     } else {
         egui::Color32::from_rgb(97, 175, 239)
     };
+    let panel = if light {
+        egui::Color32::from_rgb(242, 245, 249)
+    } else {
+        egui::Color32::from_rgb(22, 29, 39)
+    };
+    let editor = if light {
+        egui::Color32::from_rgb(250, 251, 253)
+    } else {
+        egui::Color32::from_rgb(14, 19, 27)
+    };
+    let border = if light {
+        egui::Color32::from_rgb(218, 225, 233)
+    } else {
+        egui::Color32::from_rgb(43, 55, 70)
+    };
+    let text = if light {
+        egui::Color32::from_rgb(39, 49, 62)
+    } else {
+        egui::Color32::from_rgb(218, 226, 236)
+    };
+    visuals.panel_fill = panel;
+    visuals.window_fill = panel;
+    visuals.extreme_bg_color = editor;
+    visuals.faint_bg_color = panel;
+    visuals.code_bg_color = editor;
+    visuals.widgets.noninteractive.fg_stroke.color = text;
+    visuals.widgets.noninteractive.bg_fill = panel;
+    visuals.widgets.noninteractive.bg_stroke.color = border;
+    visuals.widgets.inactive.fg_stroke.color = text;
+    visuals.widgets.inactive.bg_fill = panel;
+    visuals.widgets.inactive.bg_stroke.color = border;
+    visuals.widgets.hovered.fg_stroke.color = text;
+    visuals.widgets.hovered.bg_fill = if light {
+        egui::Color32::from_rgb(229, 237, 246)
+    } else {
+        egui::Color32::from_rgb(35, 46, 60)
+    };
+    visuals.widgets.hovered.bg_stroke.color = accent;
+    visuals.widgets.active.fg_stroke.color = text;
+    visuals.widgets.active.bg_fill = if light {
+        egui::Color32::from_rgb(218, 231, 246)
+    } else {
+        egui::Color32::from_rgb(40, 57, 75)
+    };
+    visuals.widgets.active.bg_stroke.color = accent;
+    for widget in [
+        &mut visuals.widgets.noninteractive,
+        &mut visuals.widgets.inactive,
+        &mut visuals.widgets.hovered,
+        &mut visuals.widgets.active,
+        &mut visuals.widgets.open,
+    ] {
+        widget.rounding = egui::Rounding::same(6.0);
+    }
     visuals.hyperlink_color = accent;
     visuals.selection.bg_fill = accent;
     visuals.selection.stroke.color = if light {
@@ -74,7 +128,14 @@ fn apply_theme(ctx: &egui::Context, theme: &str) {
     } else {
         egui::Color32::from_rgb(17, 25, 35)
     };
+    visuals.warn_fg_color = egui::Color32::from_rgb(226, 174, 85);
+    visuals.error_fg_color = egui::Color32::from_rgb(235, 104, 104);
     ctx.set_visuals(visuals);
+    ctx.style_mut(|style| {
+        style.spacing.item_spacing = egui::vec2(8.0, 6.0);
+        style.spacing.button_padding = egui::vec2(10.0, 6.0);
+        style.spacing.interact_size = egui::vec2(24.0, 24.0);
+    });
 }
 
 fn language_for_path(path: &Path) -> Option<&'static str> {
@@ -169,6 +230,7 @@ fn replace_word(text: &str, cursor: usize, insertion: &str) -> (String, usize) {
 
 #[allow(dead_code)]
 pub struct TyinApp {
+    repaint_ctx: egui::Context,
     config: Config,
     events: EventBus,
     resources: Arc<ResourceManager>,
@@ -216,6 +278,7 @@ impl TyinApp {
     pub fn new(cc: &eframe::CreationContext<'_>, config: Config) -> Self {
         apply_theme(&cc.egui_ctx, &config.ui.theme);
         Self {
+            repaint_ctx: cc.egui_ctx.clone(),
             config: config.clone(),
             events: EventBus::default(),
             resources: Arc::new(ResourceManager::default()),
@@ -538,9 +601,11 @@ impl eframe::App for TyinApp {
         if self.watcher.is_none() && !self.watcher_attempted {
             if let Some(root) = self.project.root.clone() {
                 let ev = self.events.clone();
+                let repaint_ctx = self.repaint_ctx.clone();
                 match watch_path(root, move |path| {
                     ev.send(Event::WorkspaceChanged);
                     ev.send(Event::FileChanged(path.to_string_lossy().to_string()));
+                    repaint_ctx.request_repaint();
                 }) {
                     Ok(watcher) => {
                         self.watcher = Some(watcher);
@@ -702,6 +767,9 @@ impl eframe::App for TyinApp {
                         &mut self.expanded_dirs,
                         self.git_status.as_ref(),
                         self.workspace_loading,
+                        self.active_tab
+                            .and_then(|index| self.tabs.get(index))
+                            .and_then(|tab| tab.path.as_deref()),
                     ) {
                         Some(explorer::Action::OpenWorkspace) => {
                             if let Some(path) = rfd::FileDialog::new().pick_folder() {
@@ -742,14 +810,17 @@ impl eframe::App for TyinApp {
                     ],
                     mark_stroke,
                 );
-                ui.label("Tyin-Editor");
+                ui.strong("Tyin-Editor");
+                if let Some(root) = self.project.root.as_deref() {
+                    ui.separator();
+                    ui.weak(root.file_name().unwrap_or_default().to_string_lossy());
+                }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    ui.label(format!(
-                        "theme:{} | LSP:{} | tabs:{}",
-                        self.config.ui.theme,
-                        self.lsp.count(),
-                        self.tabs.len()
-                    ));
+                    if ui.small_button("Search  Ctrl+P").clicked() {
+                        self.show_palette = true;
+                        self.palette_query.clear();
+                    }
+                    ui.weak(format!("LSP {}", self.lsp.count()));
                 });
             });
         });
@@ -791,36 +862,32 @@ impl eframe::App for TyinApp {
             }
 
             if !self.tabs.is_empty() {
-                ui.horizontal_wrapped(|ui| {
+                ui.horizontal(|ui| {
                     let len = self.tabs.len();
                     for i in 0..len {
                         let is_active = self.active_tab == Some(i);
                         let title = self.tabs[i].title.clone();
                         let cached = self.tabs[i].cached;
                         let dirty = self.tabs[i].buffer.dirty;
-                        let label = if is_active {
-                            format!(
-                                "[{}{}{}]",
-                                title,
-                                if cached { " (c)" } else { "" },
-                                if dirty { "*" } else { "" }
-                            )
-                        } else {
-                            format!(
-                                "{}{}{}",
-                                title,
-                                if cached { "(c)" } else { "" },
-                                if dirty { "*" } else { "" }
-                            )
-                        };
-                        if ui.button(label).clicked() {
-                            self.active_tab = Some(i);
-                            self.tabs[i].last_active = Instant::now();
-                            self.tabs[i].cached = false;
-                            self.completion_items.clear();
-                            self.completion_path = None;
-                        }
-                        if ui.small_button("x").clicked() {
+                        let mut close = false;
+                        ui.horizontal(|ui| {
+                            let mut label = title;
+                            if cached {
+                                label.push_str("  · cached");
+                            }
+                            if dirty {
+                                label.push_str("  •");
+                            }
+                            if ui.selectable_label(is_active, label).clicked() {
+                                self.active_tab = Some(i);
+                                self.tabs[i].last_active = Instant::now();
+                                self.tabs[i].cached = false;
+                                self.completion_items.clear();
+                                self.completion_path = None;
+                            }
+                            close = ui.small_button("×").on_hover_text("Close tab").clicked();
+                        });
+                        if close {
                             self.close_tab(i);
                             break;
                         }
@@ -849,14 +916,14 @@ impl eframe::App for TyinApp {
                         let line_count = editor_line_count(&current_text);
                         let editor_rows = line_count.saturating_add(EDITOR_EXTRA_SCROLL_LINES);
                         ui.horizontal(|ui| {
-                            ui.label(&path_str);
+                            ui.strong(&path_str);
                             if self.tabs[idx].buffer.dirty {
-                                ui.label("*");
+                                ui.colored_label(ui.visuals().hyperlink_color, "Unsaved");
                             }
                             ui.with_layout(
                                 egui::Layout::right_to_left(egui::Align::Center),
                                 |ui| {
-                                    ui.label(format!("{} | Ln {}", syntax_status, line_count));
+                                    ui.weak(format!("{}  ·  {} lines", syntax_status, line_count));
                                 },
                             );
                         });
@@ -1136,13 +1203,24 @@ impl eframe::App for TyinApp {
                 }
             } else {
                 ui.centered_and_justified(|ui| {
-                    ui.vertical_centered(|ui| {
-                        ui.heading("Tyin-Editor");
-                        ui.label("Native Rust • Resource-aware • No webview");
-                        ui.add_space(8.0);
-                        ui.label(
-                            "Ctrl+P: Palette • Ctrl+S: Save • Ctrl+Z/Y: Undo/Redo • Open folder",
-                        );
+                    egui::Frame::group(ui.style()).show(ui, |ui| {
+                        ui.set_min_width(360.0);
+                        ui.vertical_centered(|ui| {
+                            ui.add_space(8.0);
+                            ui.heading("Tyin-Editor");
+                            ui.weak("Native Rust · Resource-aware · No webview");
+                            ui.add_space(12.0);
+                            if ui.button("Open a workspace").clicked() {
+                                if let Some(path) = rfd::FileDialog::new().pick_folder() {
+                                    self.request_open_workspace(path);
+                                }
+                            }
+                            ui.add_space(6.0);
+                            ui.weak("Ctrl+P  Command palette");
+                            ui.weak("Ctrl+S  Save file");
+                            ui.weak("Ctrl+Z / Ctrl+Y  Undo / redo");
+                            ui.add_space(8.0);
+                        });
                     });
                 });
             }
@@ -1627,15 +1705,37 @@ impl eframe::App for TyinApp {
             });
         });
 
-        ctx.request_repaint_after(Duration::from_millis(250));
+        let has_active_work = self.workspace_scan.is_some()
+            || self.lsp.count() > 0
+            || (self.show_panel && self.panel_tab == PanelTab::Terminal && self.terminal.is_some());
+        if has_active_work {
+            ctx.request_repaint_after(Duration::from_millis(250));
+        } else if self.show_resource_monitor {
+            ctx.request_repaint_after(Duration::from_secs(1));
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        editor_line_count, lsp_position, replace_char_range, replace_word, text_offset_from_lsp,
+        apply_theme, editor_line_count, lsp_position, replace_char_range, replace_word,
+        text_offset_from_lsp,
     };
+
+    #[test]
+    fn editor_themes_use_distinct_editor_and_panel_surfaces() {
+        let context = egui::Context::default();
+        apply_theme(&context, "dark");
+        let dark = context.style().visuals.clone();
+        assert!(dark.dark_mode);
+        assert_ne!(dark.extreme_bg_color, dark.panel_fill);
+
+        apply_theme(&context, "light");
+        let light = context.style().visuals.clone();
+        assert!(!light.dark_mode);
+        assert_ne!(light.extreme_bg_color, light.panel_fill);
+    }
 
     #[test]
     fn counts_trailing_empty_lines_in_the_editor() {

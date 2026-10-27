@@ -17,12 +17,13 @@ pub(super) fn show(
     expanded_dirs: &mut HashSet<PathBuf>,
     git_status: Option<&GitStatus>,
     loading: bool,
+    active_file: Option<&Path>,
 ) -> Option<Action> {
     let mut action = None;
     ui.horizontal(|ui| {
-        ui.heading("EXPLORER");
+        ui.strong("EXPLORER");
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.button("Open").clicked() {
+            if ui.small_button("Open folder").clicked() {
                 action = Some(Action::OpenWorkspace);
             }
         });
@@ -39,9 +40,14 @@ pub(super) fn show(
     if loading {
         ui.weak("Scanning workspace...");
     }
-
     if let Some(root) = root {
-        ui.weak(root.file_name().unwrap_or_default().to_string_lossy());
+        egui::Frame::none()
+            .fill(ui.visuals().extreme_bg_color)
+            .inner_margin(egui::Margin::symmetric(8.0, 6.0))
+            .rounding(6.0)
+            .show(ui, |ui| {
+                ui.strong(root.file_name().unwrap_or_default().to_string_lossy());
+            });
     }
     let entries = visible_entries(root, tree_cache, expanded_dirs);
     ui.label(format!(
@@ -61,7 +67,10 @@ pub(super) fn show(
                         let expanded = expanded_dirs.contains(&entry.path);
                         let marker = if expanded { "▾" } else { "▸" };
                         let name = entry.path.file_name().unwrap_or_default().to_string_lossy();
-                        if ui.button(format!("{marker} {name}")).clicked() {
+                        if ui
+                            .selectable_label(expanded, format!("{marker}  {name}"))
+                            .clicked()
+                        {
                             action = Some(Action::ToggleDirectory(entry.path.clone()));
                         }
                     } else {
@@ -85,7 +94,10 @@ pub(super) fn show(
                         } else {
                             ui.add_space(18.0);
                         }
-                        if ui.button(name).clicked() {
+                        if ui
+                            .selectable_label(active_file == Some(entry.path.as_path()), name)
+                            .clicked()
+                        {
                             action = Some(Action::OpenFile(entry.path.clone()));
                         }
                     }

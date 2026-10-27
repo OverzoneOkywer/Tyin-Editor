@@ -21,11 +21,11 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             artifact: linux-x86_64
-            package: tyin-editor-linux-x86_64.tar.gz
+            package: dist/tyin-editor_*_amd64.deb
           - name: Windows
             os: windows-latest
             artifact: windows-x86_64
-            package: tyin-editor-windows-x86_64.zip
+            package: dist/Tyin-Editor-Setup-*-x64.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -51,14 +51,27 @@ jobs:
       - name: Build release binary
         run: cargo build --locked --release -p tyin-app
 
-      - name: Package Linux executable
+      - name: Package Linux installer
         if: runner.os == 'Linux'
-        run: tar -czf tyin-editor-linux-x86_64.tar.gz -C target/release tyin-app
+        run: bash packaging/linux/build-deb.sh "$GITHUB_REF_NAME" "$GITHUB_REF_TYPE" "$GITHUB_RUN_NUMBER"
 
-      - name: Package Windows executable
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        run: choco install innosetup --no-progress -y
+
+      - name: Package Windows installer
         if: runner.os == 'Windows'
         shell: pwsh
-        run: Compress-Archive -Path target/release/tyin-app.exe -DestinationPath tyin-editor-windows-x86_64.zip
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          $version = if ($env:GITHUB_REF_TYPE -eq "tag") {
+            $env:GITHUB_REF_NAME -replace '^v', ''
+          } else {
+            "0.1.0-dev.$env:GITHUB_RUN_NUMBER"
+          }
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DAppVersion=$version" packaging/windows/tyin-editor.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
