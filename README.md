@@ -17,9 +17,9 @@ Tyin-Editor mendukung build native **Linux x86_64** dan **Windows x86_64**.
 GitHub Actions membangun keduanya secara otomatis pada pull request, push ke
 `main`/`master`, dan tag versi `v*`. Pada tag versi, paket siap unduh
 dipublikasikan ke halaman **GitHub Releases**. Build dari branch tersedia sebagai
-artifact sementara di halaman run workflow. Installer Windows dan Linux akan
-tersedia setelah perubahan packaging ini masuk ke branch dan versi rilis
-berikutnya dibuat; rilis portable yang sudah ada tidak berubah.
+artifact sementara di halaman run workflow. Installer terbaru tersedia di
+[GitHub Release v0.1.1](https://github.com/OverzoneOkywer/Tyin-Editor/releases/tag/v0.1.1);
+rilis portable sebelumnya tetap tersedia di halaman Releases.
 
 ### Instalasi dari GitHub Releases
 
