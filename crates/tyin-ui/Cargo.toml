@@ -1,0 +1,22 @@
+[package]
+name = "tyin-ui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+egui.workspace = true
+eframe.workspace = true
+tyin-core = { path = "../tyin-core" }
+tyin-text = { path = "../tyin-text" }
+tyin-fs = { path = "../tyin-fs" }
+tyin-syntax = { path = "../tyin-syntax" }
+tyin-lsp = { path = "../tyin-lsp" }
+tyin-git = { path = "../tyin-git" }
+tyin-terminal = { path = "../tyin-terminal" }
+tracing.workspace = true
+anyhow.workspace = true
+rfd.workspace = true
+
+egui_extras.workspace = true

@@ -1,0 +1,41 @@
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Tyin Team"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+url = "2.5"
+toml = "0.8"
+tokio = { version = "1.40", features = ["rt-multi-thread", "macros", "sync", "time", "fs"] }
+egui = "0.29"
+eframe = { version = "0.29", features = ["wgpu"] }
+winit = "0.30"
+wgpu = "22.1"
+ropey = "1.6"
+tree-sitter = "0.23"
+tree-sitter-highlight = "0.23"
+notify = "6.1"
+ignore = "0.4"
+lsp-types = "0.97"
+crossbeam-channel = "0.5"
+dashmap = "6.1"
+indexmap = "2.6"
+rfd = "0.14"
+
+tree-sitter-rust = "0.23"
+tree-sitter-json = "0.23"
+tree-sitter-toml-ng = "0.7"
+notify-debouncer-mini = "0.7"
+
+egui_extras = { version = "0.29", features = ["all_loaders"] }

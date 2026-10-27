@@ -1,0 +1,10 @@
+[package]
+name = "tyin-text"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+ropey.workspace = true
+anyhow.workspace = true

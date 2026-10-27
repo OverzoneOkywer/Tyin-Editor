@@ -1,0 +1,21 @@
+[ui]
+theme = "dark"
+minimize_draws = true
+
+[editor]
+tab_size = 4
+lazy_tabs = true
+tab_unload_idle_secs = 300
+
+[resources]
+enable_monitor = true
+index_throttle_ms = 50
+
+[lsp]
+on_demand = true
+idle_shutdown_secs = 300
+
+# Configure an installed language server explicitly to enable real LSP support.
+# [lsp.servers.rust]
+# command = "rust-analyzer"
+# args = []

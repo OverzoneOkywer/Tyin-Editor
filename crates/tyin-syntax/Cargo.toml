@@ -1,0 +1,15 @@
+[package]
+name = "tyin-syntax"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+tree-sitter.workspace = true
+tree-sitter-highlight.workspace = true
+tree-sitter-rust.workspace = true
+tree-sitter-json.workspace = true
+tree-sitter-toml-ng.workspace = true
+anyhow.workspace = true
+tracing.workspace = true

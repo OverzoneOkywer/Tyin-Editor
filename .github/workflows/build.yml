@@ -1,0 +1,62 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-24.04
+            artifact: linux-x86_64
+            binary: target/release/tyin-app
+          - name: Windows
+            os: windows-latest
+            artifact: windows-x86_64
+            binary: target/release/tyin-app.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes \
+            libasound2-dev \
+            libudev-dev \
+            libwayland-dev \
+            libx11-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            pkg-config
+
+      - name: Build release binary
+        run: cargo build --locked --release -p tyin-app
+
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: tyin-editor-${{ matrix.artifact }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
