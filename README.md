@@ -15,8 +15,28 @@ Lihat `docs/ARCHITECTURE.md`.
 
 Tyin-Editor mendukung build native **Linux x86_64** dan **Windows x86_64**.
 GitHub Actions membangun keduanya secara otomatis pada pull request, push ke
-`main`/`master`, dan tag versi `v*`. File executable tersedia sebagai artifact
-di halaman run workflow GitHub Actions.
+`main`/`master`, dan tag versi `v*`. Pada tag versi, paket siap unduh
+dipublikasikan ke halaman **GitHub Releases**. Build dari branch tersedia sebagai
+artifact sementara di halaman run workflow.
+
+### Instalasi dari GitHub Releases
+
+1. Buka [Releases](https://github.com/OverzoneOkywer/Tyin-Editor/releases) dan
+   unduh paket sesuai sistem operasi.
+2. **Windows:** ekstrak `tyin-editor-windows-x86_64.zip`, lalu jalankan
+   `tyin-app.exe`.
+3. **Linux:** ekstrak `tyin-editor-linux-x86_64.tar.gz`, lalu jalankan:
+
+   ```bash
+   tar -xzf tyin-editor-linux-x86_64.tar.gz
+   chmod +x tyin-app
+   ./tyin-app
+   ```
+
+Paket saat ini berisi executable portable, bukan installer dengan wizard.
+Linux mungkin memerlukan library runtime sistem untuk audio, windowing, dan
+display. Pastikan Rust language server terpasang jika ingin menggunakan fitur
+LSP.
 
 ### Linux (Ubuntu/Debian)
 

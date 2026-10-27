@@ -10,9 +10,6 @@ on:
       - "v*"
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
   build:
     name: Build (${{ matrix.name }})
@@ -24,11 +21,11 @@ jobs:
           - name: Linux
             os: ubuntu-24.04
             artifact: linux-x86_64
-            binary: target/release/tyin-app
+            package: tyin-editor-linux-x86_64.tar.gz
           - name: Windows
             os: windows-latest
             artifact: windows-x86_64
-            binary: target/release/tyin-app.exe
+            package: tyin-editor-windows-x86_64.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -54,9 +51,39 @@ jobs:
       - name: Build release binary
         run: cargo build --locked --release -p tyin-app
 
-      - name: Upload executable
+      - name: Package Linux executable
+        if: runner.os == 'Linux'
+        run: tar -czf tyin-editor-linux-x86_64.tar.gz -C target/release tyin-app
+
+      - name: Package Windows executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path target/release/tyin-app.exe -DestinationPath tyin-editor-windows-x86_64.zip
+
+      - name: Upload release package
         uses: actions/upload-artifact@v4
         with:
-          name: tyin-editor-${{ matrix.artifact }}
-          path: ${{ matrix.binary }}
+          name: tyin-editor-${{ matrix.artifact }}-package
+          path: ${{ matrix.package }}
           if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download platform packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/**/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          overwrite_files: true
