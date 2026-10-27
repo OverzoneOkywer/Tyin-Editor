@@ -17,9 +17,8 @@ Tyin-Editor mendukung build native **Linux x86_64** dan **Windows x86_64**.
 GitHub Actions membangun keduanya secara otomatis pada pull request, push ke
 `main`/`master`, dan tag versi `v*`. Pada tag versi, paket siap unduh
 dipublikasikan ke halaman **GitHub Releases**. Build dari branch tersedia sebagai
-artifact sementara di halaman run workflow. Installer terbaru tersedia di
-[GitHub Release v0.1.2](https://github.com/OverzoneOkywer/Tyin-Editor/releases/tag/v0.1.2);
-rilis portable sebelumnya tetap tersedia di halaman Releases.
+artifact sementara di halaman run workflow. Installer tersedia di
+[GitHub Releases](https://github.com/OverzoneOkywer/Tyin-Editor/releases).
 
 ### Instalasi dari GitHub Releases
 
@@ -40,9 +39,23 @@ rilis portable sebelumnya tetap tersedia di halaman Releases.
 
 Uninstall menghapus executable, shortcut, dan ikon aplikasi, bukan workspace
 atau file kode pengguna. Windows mempertahankan folder konfigurasi pengguna;
-paket Debian hanya menghapus file yang dimiliki paket. Lokasi dan migrasi
-konfigurasi Tyin masih perlu dirapikan terpisah sebelum fitur updater dibuat.
-Language server tetap perlu dipasang sendiri untuk menggunakan fitur LSP.
+paket Debian hanya menghapus file yang dimiliki paket. Language server tetap
+perlu dipasang sendiri untuk menggunakan fitur LSP.
+
+### Memperbarui aplikasi
+
+Mulai **v0.1.3**, instalasi resmi Windows dan Debian dapat memeriksa rilis
+terbaru melalui tombol **Check for updates** di bagian atas aplikasi. Tyin-Editor
+menampilkan catatan rilis, mengunduh installer resmi, lalu memverifikasi ukuran
+dan SHA-256 sebelum meminta konfirmasi instalasi. Perubahan yang belum disimpan
+dapat disimpan atau dibuang sebelum aplikasi ditutup dan diperbarui.
+
+Windows menjalankan installer per pengguna tanpa wizard. Debian meminta
+otorisasi administrator melalui `pkexec` untuk memasang paket, jadi lingkungan
+desktop harus menyediakan PolicyKit. Build development atau instalasi di lokasi
+khusus tidak mengganti dirinya sendiri; unduh installer dari GitHub Releases.
+Pengguna versi sebelum v0.1.3 perlu memasang rilis v0.1.3 secara manual satu
+kali, setelah itu pembaruan dapat dimulai dari dalam aplikasi.
 
 ### Linux (Ubuntu/Debian)
 

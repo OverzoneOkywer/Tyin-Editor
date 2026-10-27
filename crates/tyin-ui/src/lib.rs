@@ -15,6 +15,7 @@ mod activity_bar;
 mod explorer;
 mod panel;
 mod syntax_view;
+mod updater;
 mod workspace;
 
 const EDITOR_EXTRA_SCROLL_LINES: usize = 8;
@@ -285,6 +286,7 @@ pub struct TyinApp {
     panel_tab: PanelTab,
     terminal: Option<TerminalSession>,
     terminal_input: String,
+    updater: updater::UpdaterUi,
     completion_items: Vec<LspCompletion>,
     completion_cursor: Option<usize>,
     completion_path: Option<PathBuf>,
@@ -333,6 +335,7 @@ impl TyinApp {
             panel_tab: PanelTab::Output,
             terminal: None,
             terminal_input: String::new(),
+            updater: updater::UpdaterUi::new(),
             completion_items: Vec::new(),
             completion_cursor: None,
             completion_path: None,
@@ -611,6 +614,7 @@ impl TyinApp {
 impl eframe::App for TyinApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.poll_workspace_scan();
+        self.updater.poll();
         if ctx.input(|input| input.viewport().close_requested()) && !self.confirmed_exit {
             if self.has_unsaved_changes() {
                 self.exit_confirmation = true;
@@ -809,6 +813,7 @@ impl eframe::App for TyinApp {
                 });
         }
 
+        let mut open_updates = false;
         egui::TopBottomPanel::top("title_bar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let (mark, _) =
@@ -836,6 +841,9 @@ impl eframe::App for TyinApp {
                     ui.weak(root.file_name().unwrap_or_default().to_string_lossy());
                 }
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button(self.updater.button_label()).clicked() {
+                        open_updates = true;
+                    }
                     if ui.small_button("Search  Ctrl+P").clicked() {
                         self.show_palette = true;
                         self.palette_query.clear();
@@ -843,6 +851,9 @@ impl eframe::App for TyinApp {
                     ui.weak(format!("LSP {}", self.lsp.count()));
                 });
             });
+            if open_updates {
+                self.updater.activate(ctx);
+            }
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -1731,6 +1742,21 @@ impl eframe::App for TyinApp {
                         }
                     }
                 });
+        }
+
+        let update_action = self.updater.show(ctx, self.has_unsaved_changes());
+        match update_action {
+            updater::InstallAction::None => {}
+            updater::InstallAction::Download => self.updater.download_available(ctx),
+            updater::InstallAction::Install { save_first } => {
+                if save_first && !self.save_all_dirty() {
+                    self.updater.request_install_confirmation();
+                } else if self.updater.apply_install_action() {
+                    self.exit_confirmation = false;
+                    self.confirmed_exit = true;
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                }
+            }
         }
 
         egui::TopBottomPanel::bottom("status_bar").show(ctx, |ui| {
