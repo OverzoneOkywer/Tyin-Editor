@@ -113,8 +113,17 @@ jobs:
           fail_on_unmatched_files: true
           overwrite_files: true
 
+      - name: Publish v0.1.4 release
+        if: github.ref == 'refs/tags/v0.1.4'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/**/*
+          body_path: docs/releases/v0.1.4.md
+          fail_on_unmatched_files: true
+          overwrite_files: true
+
       - name: Publish other releases
-        if: github.ref != 'refs/tags/v0.1.2' && github.ref != 'refs/tags/v0.1.3'
+        if: github.ref != 'refs/tags/v0.1.2' && github.ref != 'refs/tags/v0.1.3' && github.ref != 'refs/tags/v0.1.4'
         uses: softprops/action-gh-release@v2
         with:
           files: release-assets/**/*

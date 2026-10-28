@@ -8,12 +8,21 @@ pub(super) enum Action {
     OpenWorkspace,
     ToggleDirectory(PathBuf),
     OpenFile(PathBuf),
+    FocusTab(usize),
+}
+
+pub(super) struct OpenFile {
+    pub title: String,
+    pub dirty: bool,
+    pub active: bool,
 }
 
 pub(super) fn show(
     ui: &mut egui::Ui,
     root: Option<&Path>,
     tree_cache: &[FsEntry],
+    filter: &mut String,
+    open_files: &[OpenFile],
     expanded_dirs: &mut HashSet<PathBuf>,
     git_status: Option<&GitStatus>,
     loading: bool,
@@ -21,15 +30,17 @@ pub(super) fn show(
 ) -> Option<Action> {
     let mut action = None;
     ui.horizontal(|ui| {
-        ui.strong("EXPLORER");
+        ui.label(egui::RichText::new("FILES").small().strong());
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.small_button("Open folder").clicked() {
                 action = Some(Action::OpenWorkspace);
             }
         });
     });
-    ui.separator();
+    ui.add_space(8.0);
+    ui.add(egui::TextEdit::singleline(filter).hint_text("Filter files  ·  Ctrl+P"));
     if tree_cache.is_empty() {
+        ui.add_space(12.0);
         ui.label(if loading {
             "Scanning workspace..."
         } else {
@@ -46,15 +57,41 @@ pub(super) fn show(
             .inner_margin(egui::Margin::symmetric(8.0, 6.0))
             .rounding(6.0)
             .show(ui, |ui| {
-                ui.strong(root.file_name().unwrap_or_default().to_string_lossy());
+                ui.label(
+                    egui::RichText::new(root.file_name().unwrap_or_default().to_string_lossy())
+                        .monospace(),
+                );
             });
     }
-    let entries = visible_entries(root, tree_cache, expanded_dirs);
-    ui.label(format!(
-        "{} visible / {} total",
-        entries.len(),
-        tree_cache.len()
-    ));
+    if !open_files.is_empty() {
+        ui.add_space(8.0);
+        ui.label(egui::RichText::new("OPEN").small().strong());
+        for (index, file) in open_files.iter().enumerate() {
+            let marker = if file.dirty { "  •" } else { "" };
+            if ui
+                .selectable_label(file.active, format!("▤  {}{marker}", file.title))
+                .clicked()
+            {
+                action = Some(Action::FocusTab(index));
+            }
+        }
+        ui.separator();
+    }
+    ui.label(egui::RichText::new("WORKSPACE").small().strong());
+    let query = filter.to_lowercase();
+    let entries: Vec<_> = visible_entries(root, tree_cache, expanded_dirs)
+        .into_iter()
+        .filter(|(entry, _)| {
+            query.is_empty()
+                || entry
+                    .path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_lowercase()
+                    .contains(&query)
+        })
+        .collect();
     let row_height = ui.text_style_height(&egui::TextStyle::Body);
     egui::ScrollArea::vertical()
         .auto_shrink([false; 2])
@@ -90,7 +127,7 @@ pub(super) fn show(
                             })
                             .map(|file| format!("{}{}", file.index_status, file.worktree_status));
                         if let Some(marker) = git_marker {
-                            ui.colored_label(egui::Color32::from_rgb(209, 154, 102), marker);
+                            ui.colored_label(ui.visuals().warn_fg_color, marker);
                         } else {
                             ui.add_space(18.0);
                         }
@@ -104,6 +141,16 @@ pub(super) fn show(
                 });
             }
         });
+    if let Some(git_status) = git_status {
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("⑂").weak());
+            ui.monospace(&git_status.branch);
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.weak(format!("{} changed", git_status.changed_files.len()));
+            });
+        });
+    }
     action
 }
 

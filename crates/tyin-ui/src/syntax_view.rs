@@ -31,27 +31,23 @@ pub(super) fn info(path: Option<&Path>, text: &str) -> String {
         .unwrap_or_else(|error| format!("syntax error: {error}"))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{info, spans, MAX_SYNTAX_BYTES};
-    use std::path::Path;
-
-    #[test]
-    fn skips_synchronous_parsing_for_large_files() {
-        let text = " ".repeat(MAX_SYNTAX_BYTES + 1);
-        assert!(spans(Some(Path::new("large.rs")), &text).is_empty());
-        assert_eq!(
-            info(Some(Path::new("large.rs")), &text),
-            "syntax disabled for large file"
-        );
-    }
-}
-
-pub(super) fn layout(text: &str, spans: &[HighlightSpan], wrap_width: f32) -> LayoutJob {
+pub(super) fn layout(
+    text: &str,
+    spans: &[HighlightSpan],
+    wrap_width: f32,
+    light_theme: bool,
+) -> LayoutJob {
     let mut job = LayoutJob::default();
     job.wrap.max_width = wrap_width;
-    let mut plain_format = TextFormat::default();
-    plain_format.font_id = egui::FontId::monospace(14.0);
+    let plain_format = TextFormat {
+        font_id: egui::FontId::monospace(12.5),
+        color: if light_theme {
+            egui::Color32::from_rgb(39, 39, 39)
+        } else {
+            egui::Color32::from_rgb(218, 218, 218)
+        },
+        ..Default::default()
+    };
     let mut cursor = 0;
 
     for span in spans {
@@ -69,13 +65,19 @@ pub(super) fn layout(text: &str, spans: &[HighlightSpan], wrap_width: f32) -> La
         }
 
         let mut format = plain_format.clone();
-        format.color = match span.kind {
-            HighlightKind::Keyword => egui::Color32::from_rgb(198, 120, 221),
-            HighlightKind::String => egui::Color32::from_rgb(152, 195, 121),
-            HighlightKind::Comment => egui::Color32::from_rgb(128, 138, 150),
-            HighlightKind::Number => egui::Color32::from_rgb(209, 154, 102),
-            HighlightKind::Type => egui::Color32::from_rgb(86, 182, 194),
-            HighlightKind::Function => egui::Color32::from_rgb(97, 175, 239),
+        format.color = match (span.kind, light_theme) {
+            (HighlightKind::Keyword, false) => egui::Color32::from_rgb(244, 244, 244),
+            (HighlightKind::Function, false) => egui::Color32::from_rgb(216, 216, 216),
+            (HighlightKind::Type, false) => egui::Color32::from_rgb(190, 190, 190),
+            (HighlightKind::String, false) => egui::Color32::from_rgb(161, 161, 161),
+            (HighlightKind::Number, false) => egui::Color32::from_rgb(201, 201, 201),
+            (HighlightKind::Comment, false) => egui::Color32::from_rgb(86, 86, 86),
+            (HighlightKind::Keyword, true) => egui::Color32::from_rgb(23, 23, 23),
+            (HighlightKind::Function, true) => egui::Color32::from_rgb(64, 64, 64),
+            (HighlightKind::Type, true) => egui::Color32::from_rgb(88, 88, 88),
+            (HighlightKind::String, true) => egui::Color32::from_rgb(79, 79, 79),
+            (HighlightKind::Number, true) => egui::Color32::from_rgb(100, 100, 100),
+            (HighlightKind::Comment, true) => egui::Color32::from_rgb(111, 111, 111),
         };
         job.append(&text[start..end], 0.0, format);
         cursor = end;
@@ -85,4 +87,20 @@ pub(super) fn layout(text: &str, spans: &[HighlightSpan], wrap_width: f32) -> La
         job.append(&text[cursor..], 0.0, plain_format);
     }
     job
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{info, spans, MAX_SYNTAX_BYTES};
+    use std::path::Path;
+
+    #[test]
+    fn skips_synchronous_parsing_for_large_files() {
+        let text = " ".repeat(MAX_SYNTAX_BYTES + 1);
+        assert!(spans(Some(Path::new("large.rs")), &text).is_empty());
+        assert_eq!(
+            info(Some(Path::new("large.rs")), &text),
+            "syntax disabled for large file"
+        );
+    }
 }
